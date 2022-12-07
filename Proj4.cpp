@@ -116,23 +116,12 @@ int main() {
     }
   }
 
-  for(int i=0; i<SIZE_INSERT; i++) {
-    printf("%s|%s|%s|%s|%s \n", regs_locs_vei[i].cod_cli, regs_locs_vei[i].cod_vei, regs_locs_vei[i].client, regs_locs_vei[i].veiculo, regs_locs_vei[i].dias);
-  }
-
-  printf("\n");
-
-  for(int i=0; i<SIZE_IDLIST; i++) {
-    printf("%s|%s \n", regs_id_list[i].cod_cli, regs_id_list[i].cod_vei);
-  }
-
   //Menu de opções:
   do {
     printf("=================================\n");
     printf("1- Inserir registro\n");
-    printf("2- Listar os dados de clientes\n");
-    printf("3- Buscar por chave primaria\n");
-    printf("4- Sair\n");
+    printf("2- Buscar por chave primaria\n");
+    printf("3- Sair\n");
     printf("=================================\n");
     scanf("%d", &option);
     clearBuffer();
@@ -143,14 +132,10 @@ int main() {
         break;
       }
       case 2: {
-        printf("Listar os dados\n");
-        break;
-      }
-      case 3: {
         printf("Pesquisa por chave primaria\n");
         break;
       }
-      case 4: {
+      case 3: {
         printf("Saindo...\n");
         break;
       }
@@ -159,7 +144,7 @@ int main() {
         break;
     }
 
-  } while(option != 4);
+  } while(option != 3);
 
 
   fclose(data);
