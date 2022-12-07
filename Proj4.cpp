@@ -79,19 +79,18 @@ int hash_function(char hashId[6]) {
   return address;
 }
 
-void update_index(FILE *index, char cod_cli[3], char cod_vei[3]) {
+void update_index(FILE *index, char cod_cli[3], char cod_vei[3], int rrn) {
   hash_st key, verifyKey;
   char hashId[6];
   int address;
 
   strcpy(key.cod_cli, cod_cli);
   strcpy(key.cod_vei, cod_vei);
+  key.rrn = rrn;
 
   sprintf(hashId, "%s%s", cod_cli, cod_vei);
   address = hash_function(hashId);
   printf("Endereco: %d \n", address);
-
-  key.rrn = address;
 
   fseek(index, sizeof(hash_st)*address, SEEK_SET);
   fread(&verifyKey, sizeof(hash_st), 1, index);
@@ -101,7 +100,7 @@ void update_index(FILE *index, char cod_cli[3], char cod_vei[3]) {
     fwrite(&key, sizeof(hash_st), 1, index);
     printf("Chave inserida no endereco: %d\n", address);
   } else { //Overflow Progressivo
-    int tried=0;
+    int tried=0; //contador de tentativas
     printf("Colisao \n");
     
     for(int i=address+1; i<SIZE_HASHING; i++) {
@@ -112,7 +111,6 @@ void update_index(FILE *index, char cod_cli[3], char cod_vei[3]) {
       printf("Tentativa %d->%d\n", tried, i);
 
       if(!strcmp(verifyKey.cod_cli, "##") && !strcmp(verifyKey.cod_vei, "##")) {
-        key.rrn = i;
         fseek(index, sizeof(hash_st)*i, SEEK_SET);
         fwrite(&key, sizeof(hash_st), 1, index);
         printf("Chave inserida no endereco: %d\n", i);
@@ -128,7 +126,6 @@ void update_index(FILE *index, char cod_cli[3], char cod_vei[3]) {
       printf("Tentativa %d->%d\n", tried, i);
 
       if(!strcmp(verifyKey.cod_cli, "##") && !strcmp(verifyKey.cod_vei, "##")) {
-        key.rrn = i;
         fseek(index, sizeof(hash_st)*i, SEEK_SET);
         fwrite(&key, sizeof(hash_st), 1, index);
         printf("Chave inserida no endereco: %d\n", i);
@@ -141,7 +138,7 @@ void update_index(FILE *index, char cod_cli[3], char cod_vei[3]) {
 }
 
 void insert(FILE *data, FILE *index, veic_t *regs_locs_vei) {
-  int option, reg_size;
+  int option, reg_size, rrn=0;
   char insert_register[124], ch;
 
   printf("\n=================================\n");
@@ -172,11 +169,14 @@ void insert(FILE *data, FILE *index, veic_t *regs_locs_vei) {
   sprintf(insert_register, "%s|%s|%s|%s|%s|", regs_locs_vei[option].cod_cli, regs_locs_vei[option].cod_vei, regs_locs_vei[option].client, regs_locs_vei[option].veiculo, regs_locs_vei[option].dias);
   reg_size = strlen(insert_register);
 
-  while(fread(&ch, sizeof(char), 1, data)); //posiciona no fim do arquivo
+  rewind(data); //volta do inicio do arquivo para contar os bytes e salvar o rrn no index
+  while(fread(&ch, sizeof(char), 1, data)) { //posiciona no fim do arquivo
+    rrn++;
+  }
   fwrite(&reg_size, sizeof(char), 1, data);
   fwrite(insert_register, sizeof(char), reg_size, data); //insere o registro no fim do arquivo
-
-  update_index(index, regs_locs_vei[option].cod_cli, regs_locs_vei[option].cod_vei);
+  
+  update_index(index, regs_locs_vei[option].cod_cli, regs_locs_vei[option].cod_vei, rrn);
 
   strcpy(regs_locs_vei[option].cod_cli, "***"); //adiciona marcador no campo cod_cli para indicar que o registro ja foi inserido
   return;
