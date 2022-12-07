@@ -8,6 +8,7 @@
 
 #define SIZE_INSERT 8
 #define SIZE_IDLIST 5
+#define SIZE_HASHING 13
 
 typedef struct veiculo {
   char cod_cli[3];
@@ -21,6 +22,12 @@ typedef struct remove {
   char cod_cli[3];
   char cod_vei[3];
 } reg_id_t;
+
+typedef struct hash {
+  char cod_cli[3];
+  char cod_vei[3];
+  int rrn;
+} hash_st;
 
 void clearBuffer() {    
   while ( getchar() != '\n' );
@@ -50,6 +57,20 @@ int loadFiles(veic_t *regs_locs_vei, reg_id_t *regs_id_list) {
   fclose(insere);
   fclose(busca);
   return 1;
+}
+
+void initialize_index_hash(FILE *index) {
+  hash_st key;
+
+  strcpy(key.cod_cli, "##");
+  strcpy(key.cod_vei, "##");
+  key.rrn = -1;
+
+  for(int i=0; i<SIZE_HASHING; i++) {
+    fwrite(&key, sizeof(hash_st), 1, index);
+  }
+
+  return;
 }
 
 void insert(FILE *data, veic_t *regs_locs_vei) {
@@ -95,7 +116,7 @@ void insert(FILE *data, veic_t *regs_locs_vei) {
 int main() {
   veic_t regs_locs_vei[SIZE_INSERT]; //armazena os registros para serem inseridos
   reg_id_t regs_id_list[SIZE_IDLIST]; //armazena os registros para serem buscados
-  FILE *data;
+  FILE *data, *index;
   int option;
 
   if(!(loadFiles(regs_locs_vei, regs_id_list))) { // chama loadFiles para carregar na memoria os arquivos insere.bin e busca.bin
@@ -103,6 +124,8 @@ int main() {
     return 0;
   }
 
+
+  //Arquivo de dados (armazena o registros e seus campos):
   if(!(data = fopen("data.bin", "rb"))) { //Verifica se o arquivo de dados já existe
     if((data = fopen("data.bin", "w+b")) == NULL) { //Se nao existir será criado
       printf("Nao foi possivel criar o arquivo data.bin");
@@ -115,6 +138,24 @@ int main() {
       return 0;
     }
   }
+
+
+  //Arquivo index (hashing) para facilitar o acesso aos registros no arquivo de dados:
+  if(!(index = fopen("index.bin", "rb"))) { //Verifica se o arquivo index já existe
+    if((index = fopen("index.bin", "w+b")) == NULL) { //Se nao existir será criado
+      printf("Nao foi possivel criar o arquivo index.bin");
+      return 0;
+    }
+    initialize_index_hash(index); //Inicializa o arquivo de index
+
+  } else { //E se ja existir, vai abrir o arquivo para escrita e leitura
+    fclose(index);
+    if((index = fopen("index.bin", "r+b")) == NULL) {
+      printf("Nao foi possivel abrir o arquivo index.bin");
+      return 0;
+    }
+  }
+
 
   //Menu de opções:
   do {
@@ -148,5 +189,6 @@ int main() {
 
 
   fclose(data);
+  fclose(index);
   return 1;
 }
