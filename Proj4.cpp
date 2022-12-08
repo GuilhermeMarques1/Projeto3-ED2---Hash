@@ -175,10 +175,93 @@ void insert(FILE *data, FILE *index, veic_t *regs_locs_vei) {
   }
   fwrite(&reg_size, sizeof(char), 1, data);
   fwrite(insert_register, sizeof(char), reg_size, data); //insere o registro no fim do arquivo
-  
+
   update_index(index, regs_locs_vei[option].cod_cli, regs_locs_vei[option].cod_vei, rrn);
 
   strcpy(regs_locs_vei[option].cod_cli, "***"); //adiciona marcador no campo cod_cli para indicar que o registro ja foi inserido
+  return;
+}
+
+int search_in_index(FILE *index, char hashId[6], int address) {
+  int access=0;
+  char key[6];
+  hash_st fetchedIndex;
+
+  fseek(index, sizeof(hash_st)*address, SEEK_SET);
+  for(int i=address; i<SIZE_HASHING; i++) {
+    fread(&fetchedIndex, sizeof(hash_st), 1, index);
+    access++;
+    
+    sprintf(key, "%s%s", fetchedIndex.cod_cli, fetchedIndex.cod_vei);
+    if(!strcmp(key, hashId)) {
+      printf("Chave encontrada: h(x): %d | addr: %d | acessos: %d\n", address, address+access-1, access);
+      return fetchedIndex.rrn;
+    }
+
+    if(!strcasecmp(key, "####")) {
+      printf("Chave nao encotrada: h(x): %d | acessos: %d\n", address, access);
+      return -1;
+    }
+  }
+
+  rewind(index);
+  for(int i=0; i<address; i++) {
+    fread(&fetchedIndex, sizeof(hash_st), 1, index);
+    access++;
+    
+    sprintf(key, "%s%s", fetchedIndex.cod_cli, fetchedIndex.cod_vei);
+    if(!strcmp(key, hashId)) {
+      printf("Chave encontrada: h(x): %d | addr: %d | acessos: %d\n", address, address+access-1, access);
+      return fetchedIndex.rrn;
+    }
+
+    if(!strcasecmp(key, "####")) {
+      printf("Chave nao encotrada: h(x): %d | acessos: %d\n", address, access);
+      return -1;
+    }
+  }
+
+  printf("Chave nao encotrada: h(x): %d | acessos: %d\n", address, access);
+  return -1;
+}
+
+void fetch_key(FILE *data, FILE *index, reg_id_t *regs_id_list) {
+  int option, address, rrn;
+  char hashId[6], fetchedData[110], regSize;
+
+  printf("\n=================================\n");
+  printf("Digite o numero da opcao que deseja buscar:\n\n");
+  for(int i=0; i<SIZE_IDLIST; i++) {
+    printf("%d- ", i+1);
+    printf("%s", regs_id_list[i].cod_cli);
+    printf("%s\n", regs_id_list[i].cod_vei);
+  }
+  scanf("%d", &option);
+  clearBuffer();
+
+  while(option < 1 || option > SIZE_IDLIST) {
+    printf("Opcao invalida, por favor digite novamente: ");
+    scanf("%d", &option);
+    clearBuffer();
+  }
+  option--;
+
+  sprintf(hashId, "%s%s", regs_id_list[option].cod_cli, regs_id_list[option].cod_vei);
+  address = hash_function(hashId);
+
+  rrn = search_in_index(index, hashId, address);
+
+  if(rrn == -1) { //Chave nao encontrada
+    return;
+  }
+  
+  fseek(data, rrn, SEEK_SET);
+  fread(&regSize, sizeof(char), 1, data);
+  fread(&fetchedData, (int)regSize, 1, data);
+  fetchedData[regSize] = '\0';
+
+  printf("%s\n", fetchedData);
+
   return;
 }
 
@@ -192,7 +275,6 @@ int main() {
     printf("Falha ao carregar os arquivos");
     return 0;
   }
-
 
   //Arquivo de dados (armazena o registros e seus campos):
   if(!(data = fopen("data.bin", "rb"))) { //Verifica se o arquivo de dados já existe
@@ -225,7 +307,6 @@ int main() {
     }
   }
 
-
   //Menu de opções:
   do {
     printf("=================================\n");
@@ -242,7 +323,7 @@ int main() {
         break;
       }
       case 2: {
-        printf("Pesquisa por chave primaria\n");
+        fetch_key(data, index, regs_id_list);
         break;
       }
       case 3: {
